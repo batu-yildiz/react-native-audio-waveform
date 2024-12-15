@@ -23,7 +23,6 @@ import {
   PermissionStatus,
   playbackSpeedThreshold,
   PlayerState,
-  RecorderState,
   UpdateFrequency,
 } from '../../constants';
 import {
@@ -78,7 +77,6 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
   const [currentProgress, setCurrentProgress] = useState<number>(0);
   const [panMoving, setPanMoving] = useState(false);
   const [playerState, setPlayerState] = useState(PlayerState.stopped);
-  const [recorderState, setRecorderState] = useState(RecorderState.stopped);
   const audioSpeed: number =
     playbackSpeed > playbackSpeedThreshold ? 1.0 : playbackSpeed;
 
@@ -97,8 +95,13 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
     markPlayerAsUnmounted,
   } = useAudioPlayer();
 
-  const { startRecording, stopRecording, pauseRecording, resumeRecording } =
-    useAudioRecorder();
+  const {
+    recorderState,
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording,
+  } = useAudioRecorder(onRecorderStateChange);
 
   const { checkHasAudioRecorderPermission } = useAudioPermission();
 
@@ -310,7 +313,6 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
         if (hasPermission === PermissionStatus.granted) {
           const start = await startRecording(args);
           if (!isNil(start) && start) {
-            setRecorderState(RecorderState.recording);
             return Promise.resolve(true);
           } else {
             return Promise.reject(new Error('error in start recording action'));
@@ -340,7 +342,6 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
           setWaveform([]);
           const pathData = head(data);
           if (!isNil(pathData)) {
-            setRecorderState(RecorderState.stopped);
             return Promise.resolve(pathData);
           } else {
             return Promise.reject(
@@ -371,7 +372,6 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
       try {
         const pause = await pauseRecording();
         if (!isNil(pause) && pause) {
-          setRecorderState(RecorderState.paused);
           return Promise.resolve(pause);
         } else {
           return Promise.reject(new Error('Error in pausing recording audio'));
@@ -393,7 +393,6 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
         if (hasPermission === PermissionStatus.granted) {
           const resume = await resumeRecording();
           if (!isNil(resume)) {
-            setRecorderState(RecorderState.recording);
             return Promise.resolve(resume);
           } else {
             return Promise.reject(new Error('Error in resume recording'));
@@ -609,7 +608,7 @@ export const Waveform = forwardRef<IWaveformRef, IWaveform>((props, ref) => {
     pauseRecord: pauseRecordingAction,
     stopRecord: stopRecordingAction,
     resumeRecord: resumeRecordingAction,
-    currentState: mode === 'static' ? playerState : recorderState,
+    currentState: mode === 'static' ? playerState : (recorderState as any),
     playerKey: path,
   }));
 

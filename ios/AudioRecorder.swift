@@ -18,6 +18,37 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
   private var timer: Timer?
     var updateFrequency = UpdateFrequency.medium
 
+  override init() {
+      super.init()
+      NotificationCenter.default.addObserver(self, selector: #selector(handleAudioSessionInterruption(_:)), name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance())
+  }
+
+  deinit {
+      NotificationCenter.default.removeObserver(self)
+  }
+
+  // handle interrupt events
+  @objc
+  func handleAudioSessionInterruption(_ notification: Notification) {
+      guard let userInfo = notification.userInfo,
+          let interruptionType = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt else {
+          return
+      }
+
+      switch interruptionType {
+      case AVAudioSession.InterruptionType.began.rawValue:
+          pauseRecording { _ in }  // Handle pause during interruption
+          EventEmitter.sharedInstance.dispatch(name: "onRecorderStateChange", body: ["state": "paused"])
+          break
+      case AVAudioSession.InterruptionType.ended.rawValue:
+          resumeRecording { _ in }  // Resume if interruption should allow continuation
+          EventEmitter.sharedInstance.dispatch(name: "onRecorderStateChange", body: ["state": "recording"])
+          break
+      default:
+          break
+      }
+  }
+
   private func createAudioRecordPath(fileNameFormat: String?) -> URL? {
     let format = DateFormatter()
     format.dateFormat = fileNameFormat ?? "yyyy-MM-dd-HH-mm-ss-SSS"
