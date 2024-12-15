@@ -17,7 +17,7 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
   var recordedDuration: CMTime = CMTime.zero
   private var timer: Timer?
     var updateFrequency = UpdateFrequency.medium
-  
+
   private func createAudioRecordPath(fileNameFormat: String?) -> URL? {
     let format = DateFormatter()
     format.dateFormat = fileNameFormat ?? "yyyy-MM-dd-HH-mm-ss-SSS"
@@ -26,7 +26,7 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
     let url = documentsDirectory.appendingPathComponent(currentFileName)
     return url
   }
-  
+
     func startRecording(_ path: String?, encoder : Int?, updateFrequency: UpdateFrequency, sampleRate : Int?, bitRate : Int?, fileNameFormat: String?, useLegacy: Bool?, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) -> Void {
     useLegacyNormalization = useLegacy ?? false
       self.updateFrequency = updateFrequency
@@ -44,9 +44,9 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
       AVNumberOfChannelsKey: 1,
       AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
     ]
-    
-    let options: AVAudioSession.CategoryOptions = [.defaultToSpeaker, .allowBluetooth]
-   
+
+    let options: AVAudioSession.CategoryOptions = [.defaultToSpeaker, .allowBluetooth, mixWithOthers]
+
     if (path == nil) {
       guard let newPath = self.createAudioRecordPath(fileNameFormat: fileNameFormat) else {
         reject(Constants.audioWaveforms, "Failed to initialise file URL", nil)
@@ -56,8 +56,8 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
     } else {
       audioUrl = URL(fileURLWithPath: path!)
     }
-    
-    
+
+
     do {
       try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playAndRecord, options: options)
       try AVAudioSession.sharedInstance().setActive(true)
@@ -76,13 +76,13 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
       reject(Constants.audioWaveforms, "Failed to start recording", error)
     }
   }
-    
+
     @objc func timerUpdate(_ sender:Timer) {
         if (audioRecorder?.isRecording ?? false) {
             EventEmitter.sharedInstance.dispatch(name: Constants.onCurrentRecordingWaveformData, body: [Constants.currentDecibel: getDecibelLevel()])
         }
     }
-    
+
     func startListening() {
       stopListening()
         DispatchQueue.main.async { [weak self] in
@@ -90,12 +90,12 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
             strongSelf.timer = Timer.scheduledTimer(timeInterval: TimeInterval((Float(strongSelf.updateFrequency.rawValue) / 1000)), target: strongSelf, selector: #selector(strongSelf.timerUpdate(_:)), userInfo: nil, repeats: true)
         }
     }
-  
+
   func stopListening() {
     timer?.invalidate()
     timer = nil
   }
-  
+
   public func stopRecording(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
       stopListening()
     audioRecorder?.stop()
@@ -120,17 +120,17 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
     }
     audioRecorder = nil
   }
-  
+
   public func pauseRecording(_ resolve: RCTPromiseResolveBlock) -> Void {
     audioRecorder?.pause()
     resolve(true)
   }
-  
+
   public func resumeRecording(_ resolve: RCTPromiseResolveBlock) -> Void {
     audioRecorder?.record()
     resolve(true)
   }
-    
+
     func getDecibelLevel() -> Float {
         audioRecorder?.updateMeters()
         if(useLegacyNormalization){
@@ -142,11 +142,11 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
             return linear
         }
     }
-  
+
   public func getDecibel(_ resolve: RCTPromiseResolveBlock) -> Void {
       resolve(getDecibelLevel())
   }
-  
+
   public func checkHasAudioRecorderPermission(_ resolve: RCTPromiseResolveBlock) -> Void{
     var hasPermission = ""
     switch AVAudioSession.sharedInstance().recordPermission{
@@ -163,7 +163,7 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
     }
     resolve(hasPermission)
   }
-  
+
   public func getAudioRecorderPermission(_ resolve: @escaping RCTPromiseResolveBlock) -> Void{
     AVAudioSession.sharedInstance().requestRecordPermission() { allowed in
       DispatchQueue.main.async {
@@ -172,7 +172,7 @@ public class AudioRecorder: NSObject, AVAudioRecorderDelegate{
       }
     }
   }
-  
+
   public func getEncoder(_ enCoder: Int) -> Int {
     switch(enCoder) {
     case Constants.kAudioFormatMPEG4AAC:
