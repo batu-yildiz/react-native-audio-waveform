@@ -7,7 +7,7 @@ export const useAudioRecorder = (onStateChange?: (state: string) => void) => {
   const [recorderState, setRecorderState] = useState('stopped');
 
   const { AudioWaveform: NativeAudioWaveform } = NativeModules; // Ensure this matches your native module name
-  const audioEventEmitter = new NativeEventEmitter(NativeAudioWaveform);
+  const waveformEmitter = new NativeEventEmitter(NativeAudioWaveform);
 
   const startRecording = (args?: Partial<IStartRecording>) => {
     setRecorderState('recording');
@@ -39,15 +39,15 @@ export const useAudioRecorder = (onStateChange?: (state: string) => void) => {
       }
     };
 
-    const listener = audioEventEmitter.addListener(
-      'onRecorderStateChange',
+    const listener = waveformEmitter.addListener(
+      'RecorderStateChange',
       handleRecorderStateChange
     );
 
     return () => {
       listener.remove();
     };
-  }, [audioEventEmitter, onStateChange]);
+  }, [onStateChange]);
 
   const getDecibel = () => AudioWaveform.getDecibel();
 
